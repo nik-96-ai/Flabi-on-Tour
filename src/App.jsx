@@ -130,7 +130,8 @@ export default function App() {
               <div style={{ fontSize: 12, color: COLORS.gray, letterSpacing: 1 }}>CARBAGE RUN 2025</div>
               <h1 style={{ fontSize: 44, margin: "6px 0 8px", color: COLORS.navy }}>Flabi on tour</h1>
               <p style={{ color: COLORS.gray, maxWidth: 560 }}>
-                Wir sammeln Spenden zugunsten der <b>Paraplegie Schweiz</b>, damit Menschen nach einem Autounfall mit paraplegischen Folgen den Weg zurück in den Alltag finden.
+                Zwei Freunde, ein blauer VW Kombi und eine Strecke quer durch den Balkan. Wir posten Etappen als Blog, aktualisieren unsere Position und sammeln Spenden pro gefahrenem
+                Kilometer. Die Spenden gehen zugunsten der <b>Paraplegie Schweiz</b>, damit Menschen nach einem Autounfall mit paraplegischen Folgen den Weg zurück in den Alltag finden.
                 Verfolge unsere Etappen, Live-Position und unterstütze pro Kilometer oder mit einem festen Beitrag.
               </p>
               <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
