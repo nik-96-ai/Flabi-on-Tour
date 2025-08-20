@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 // ---- THEME ----
@@ -45,6 +45,8 @@ const CardBody = ({ children, style }) => (
   <div style={{ padding: 16, ...(style||{}) }}>{children}</div>
 );
 
+function uid(){ return `${Date.now()}-${Math.random().toString(36).slice(2,8)}`; }
+
 export default function FlabiOnTourApp() {
   // ---- AUTH (Supabase) ----
   const [isAdmin, setIsAdmin] = useState(false);
@@ -68,8 +70,10 @@ export default function FlabiOnTourApp() {
   async function logout(){ await supabase.auth.signOut(); }
 
   // ---- DATA STATE ----
-  const [blogs, setBlogs] = useState([]);               // posts
-  const [newEntry, setNewEntry] = useState({ title: "", text: "", image: "" });
+  const [blogs, setBlogs] = useState([]);               // posts (images: jsonb[] of URLs)
+  const [newEntry, setNewEntry] = useState({ title: "", text: "", images: [] });
+  const [uploading, setUploading] = useState(false);
+
   const [lat, setLat] = useState("47.3769");           // status.lat
   const [lng, setLng] = useState("8.5417");            // status.lng
   const [km, setKm]   = useState(0);                    // status.km
@@ -96,15 +100,29 @@ export default function FlabiOnTourApp() {
   }
   useEffect(()=>{ loadAll(); }, []);
 
+  // ---- UPLOAD TO SUPABASE STORAGE ----
+  async function uploadImages(files){
+    const urls = [];
+    for (const file of files){
+      const ext = (file.name.split('.').pop()||'jpg').toLowerCase();
+      const path = `posts/${uid()}.${ext}`;
+      const { error } = await supabase.storage.from('flabi').upload(path, file, { cacheControl: '3600', upsert: false });
+      if(error){ alert('Upload fehlgeschlagen: '+error.message); continue; }
+      const { data } = supabase.storage.from('flabi').getPublicUrl(path);
+      urls.push(data.publicUrl);
+    }
+    return urls;
+  }
+
   // ---- ACTIONS ----
   async function addBlog(){
     if(!isAdmin) return alert('Nur Admin darf Blogeinträge erstellen.');
     if(!newEntry.title || !newEntry.text) return;
     const { error } = await supabase.from('posts').insert({
-      title: newEntry.title, text: newEntry.text, image: newEntry.image
+      title: newEntry.title, text: newEntry.text, images: newEntry.images
     });
     if(error) return alert(error.message);
-    setNewEntry({ title: "", text: "", image: "" });
+    setNewEntry({ title: "", text: "", images: [] });
     loadAll();
   }
 
@@ -138,6 +156,36 @@ export default function FlabiOnTourApp() {
     (document.getElementById('fixed-amount')||{}).value = "";
     loadAll();
   }
+
+  // ---- EDIT POST ----
+  const [editingId, setEditingId] = useState(null);
+  const editingPost = useMemo(()=> blogs.find(b=>b.id===editingId), [editingId, blogs]);
+  const [editEntry, setEditEntry] = useState({ title:"", text:"", images:[] });
+  useEffect(()=>{
+    if(editingPost) setEditEntry({ title: editingPost.title||"", text: editingPost.text||"", images: editingPost.images||[] });
+  }, [editingPost]);
+
+  async function saveEdit(){
+    if(!isAdmin || !editingId) return;
+    const { error } = await supabase.from('posts').update({ title: editEntry.title, text: editEntry.text, images: editEntry.images }).eq('id', editingId);
+    if(error) return alert(error.message);
+    setEditingId(null); setEditEntry({ title:"", text:"", images:[] });
+    loadAll();
+  }
+
+  async function addEditImages(files){
+    setUploading(true);
+    const urls = await uploadImages(files);
+    setEditEntry(s=>({ ...s, images:[...s.images, ...urls] }));
+    setUploading(false);
+  }
+
+  // ---- GALLERY LIGHTBOX ----
+  const [lightbox, setLightbox] = useState({ open:false, images:[], index:0 });
+  function openLightbox(images, i){ setLightbox({ open:true, images, index:i||0 }); }
+  function closeLightbox(){ setLightbox({ open:false, images:[], index:0 }); }
+  function prev(){ setLightbox(s=> ({...s, index: (s.index-1 + s.images.length)%s.images.length })); }
+  function next(){ setLightbox(s=> ({...s, index: (s.index+1) % s.images.length })); }
 
   // ---- ASSETS ----
   const CAR_IMG = "/car.jpg"; // Bild in /public/car.jpg ablegen
@@ -212,7 +260,7 @@ export default function FlabiOnTourApp() {
       <Section id="blog">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <h2 style={{ fontSize: 26, margin: 0 }}>Rally Blog</h2>
-          <Button onClick={addBlog} disabled={!isAdmin}>＋ Eintrag hinzufügen</Button>
+          <Button onClick={addBlog} disabled={!isAdmin || uploading}>＋ Eintrag speichern</Button>
         </div>
 
         <Card>
@@ -223,17 +271,31 @@ export default function FlabiOnTourApp() {
                 <Input value={newEntry.title} onChange={(e)=>setNewEntry({ ...newEntry, title: e.target.value })} placeholder="Tag 1: Start in …" disabled={!isAdmin} />
               </div>
               <div>
-                <div style={{ fontSize: 12, marginBottom: 6 }}>Bild‑URL (optional)</div>
-                <Input value={newEntry.image} onChange={(e)=>setNewEntry({ ...newEntry, image: e.target.value })} placeholder="https://…" disabled={!isAdmin} />
+                <div style={{ fontSize: 12, marginBottom: 6 }}>Bilder</div>
+                <input type="file" accept="image/*" multiple disabled={!isAdmin || uploading}
+                  onChange={async (e)=>{
+                    const files = Array.from(e.target.files||[]);
+                    if(!files.length) return;
+                    setUploading(true);
+                    const urls = await uploadImages(files);
+                    setNewEntry(s=>({ ...s, images:[...(s.images||[]), ...urls] }));
+                    setUploading(false);
+                  }} />
+                {uploading && <div style={{ color: COLORS.gray, fontSize:12, marginTop:6 }}>Lade hoch…</div>}
+                {(newEntry.images||[]).length>0 && (
+                  <div style={{ display:'flex', gap:8, marginTop:8, flexWrap:'wrap' }}>
+                    {newEntry.images.map((u,i)=> (
+                      <div key={i} style={{ position:'relative' }}>
+                        <img src={u} alt="preview" style={{ width:90, height:70, objectFit:'cover', borderRadius:8, border:`1px solid ${COLORS.line}` }} />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div style={{ marginTop: 12 }}>
               <div style={{ fontSize: 12, marginBottom: 6 }}>Text</div>
               <Textarea rows={4} value={newEntry.text} onChange={(e)=>setNewEntry({ ...newEntry, text: e.target.value })} placeholder="Kurzer Bericht der Etappe…" disabled={!isAdmin} />
-            </div>
-            <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-              <Button onClick={addBlog} disabled={!isAdmin}>Eintrag speichern</Button>
-              <Button style={{ background: "white", color: COLORS.ink }} onClick={()=>setNewEntry({ title: "", text: "", image: "" })} disabled={!isAdmin}>Zurücksetzen</Button>
             </div>
           </CardBody>
         </Card>
@@ -241,11 +303,54 @@ export default function FlabiOnTourApp() {
         <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
           {blogs.map((post) => (
             <Card key={post.id}>
-              {post.image && <img src={post.image} alt={post.title} style={{ width: "100%", height: 300, objectFit: "cover" }} />}
+              {/* GALLERY LAYOUT: großes Bild links, Thumbs rechts */}
+              {Array.isArray(post.images) && post.images.length>0 && (
+                <div style={{ display:'grid', gridTemplateColumns: '2fr 1fr', gap:12, padding:12 }}>
+                  <div>
+                    <img src={post.images[0]} alt="main" style={{ width:'100%', height:360, objectFit:'cover', borderRadius:12 }} onClick={()=>openLightbox(post.images, 0)} />
+                  </div>
+                  <div style={{ display:'grid', gap:8 }}>
+                    {post.images.slice(1).map((u,idx)=> (
+                      <img key={idx} src={u} alt={`img-${idx+1}`} style={{ width:'100%', height:110, objectFit:'cover', borderRadius:10, cursor:'pointer' }} onClick={()=>openLightbox(post.images, idx+1)} />
+                    ))}
+                  </div>
+                </div>
+              )}
               <CardBody>
-                <h3 style={{ margin: 0 }}>{post.title}</h3>
-                <p style={{ color: COLORS.gray, marginTop: 8 }}>{post.text}</p>
-                {post.created_at && <p style={{ color: COLORS.gray, fontSize: 12, marginTop: 8 }}>{new Date(post.created_at).toLocaleString()}</p>}
+                {editingId===post.id ? (
+                  <div>
+                    <Input value={editEntry.title} onChange={e=>setEditEntry(s=>({...s, title:e.target.value}))} />
+                    <Textarea rows={4} style={{ marginTop:8 }} value={editEntry.text} onChange={e=>setEditEntry(s=>({...s, text:e.target.value}))} />
+                    <div style={{ marginTop:8 }}>
+                      <div style={{ fontSize:12, marginBottom:6 }}>Weitere Bilder hinzufügen</div>
+                      <input type="file" accept="image/*" multiple disabled={uploading} onChange={async (e)=>{ const files=Array.from(e.target.files||[]); if(!files.length) return; setUploading(true); const urls=await uploadImages(files); setEditEntry(s=>({...s, images:[...s.images, ...urls]})); setUploading(false); }} />
+                      {uploading && <div style={{ color: COLORS.gray, fontSize:12, marginTop:6 }}>Lade hoch…</div>}
+                      <div style={{ display:'flex', gap:8, marginTop:8, flexWrap:'wrap' }}>
+                        {(editEntry.images||[]).map((u,i)=> (
+                          <div key={i} style={{ position:'relative' }}>
+                            <img src={u} alt="thumb" style={{ width:90, height:70, objectFit:'cover', borderRadius:8, border:`1px solid ${COLORS.line}` }} />
+                            <button onClick={()=> setEditEntry(s=>({ ...s, images: s.images.filter((_,x)=>x!==i) }))} style={{ position:'absolute', top:-6, right:-6, background:'#000', color:'#fff', border:'none', borderRadius:10, width:20, height:20, cursor:'pointer' }}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ display:'flex', gap:8, marginTop:12 }}>
+                      <Button onClick={saveEdit}>Speichern</Button>
+                      <Button style={{ background:'#fff', color:COLORS.ink }} onClick={()=>setEditingId(null)}>Abbrechen</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h3 style={{ margin: 0 }}>{post.title}</h3>
+                    <p style={{ color: COLORS.gray, marginTop: 8 }}>{post.text}</p>
+                    {post.created_at && <p style={{ color: COLORS.gray, fontSize: 12, marginTop: 8 }}>{new Date(post.created_at).toLocaleString()}</p>}
+                    {isAdmin && (
+                      <div style={{ marginTop:10 }}>
+                        <Button style={{ background:COLORS.navy }} onClick={()=> setEditingId(post.id)}>Bearbeiten</Button>
+                      </div>
+                    )}
+                  </>
+                )}
               </CardBody>
             </Card>
           ))}
@@ -361,6 +466,20 @@ export default function FlabiOnTourApp() {
           </Card>
         </div>
       </Section>
+
+      {/* LIGHTBOX MODAL */}
+      {lightbox.open && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.8)', display:'grid', placeItems:'center', zIndex:70 }}>
+          <img src={lightbox.images[lightbox.index]} alt="img" style={{ maxWidth:'90vw', maxHeight:'85vh', borderRadius:12 }} />
+          <button onClick={closeLightbox} style={{ position:'fixed', top:20, right:24, background:'#000', color:'#fff', border:'1px solid #fff', borderRadius:20, padding:'6px 10px', cursor:'pointer' }}>Schließen</button>
+          {lightbox.images.length>1 && (
+            <>
+              <button onClick={prev} style={{ position:'fixed', left:24, top:'50%', transform:'translateY(-50%)', background:'#000', color:'#fff', border:'none', borderRadius:999, width:44, height:44, cursor:'pointer' }}>‹</button>
+              <button onClick={next} style={{ position:'fixed', right:24, top:'50%', transform:'translateY(-50%)', background:'#000', color:'#fff', border:'none', borderRadius:999, width:44, height:44, cursor:'pointer' }}>›</button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* FOOTER */}
       <div style={{ borderTop: `1px solid ${COLORS.line}`, marginTop: 24 }}>
