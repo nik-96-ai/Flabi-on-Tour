@@ -180,6 +180,34 @@ export default function FlabiOnTourApp() {
     setUploading(false);
   }
 
+  // aus Public-URL den Pfad im Bucket extrahieren (…/flabi/<path>)
+function storagePathFromPublicUrl(url) {
+  const marker = '/storage/v1/object/public/flabi/';
+  const i = url.indexOf(marker);
+  return i === -1 ? null : url.slice(i + marker.length);
+}
+
+async function deletePost(post) {
+  if (!isAdmin) { alert('Nur Admin darf löschen.'); return; }
+  if (!confirm('Diesen Post wirklich löschen?')) return;
+
+  // zuerst Bilder im Storage löschen (optional; Fehler ignorieren)
+  const paths = (post.images || [])
+    .map(storagePathFromPublicUrl)
+    .filter(Boolean);
+
+  if (paths.length) {
+    try { await supabase.storage.from('flabi').remove(paths); } catch {}
+  }
+
+  // dann den Post in der DB löschen
+  const { error } = await supabase.from('posts').delete().eq('id', post.id);
+  if (error) return alert(error.message);
+
+  loadAll();
+}
+
+
   // ---- GALLERY LIGHTBOX ----
   const [lightbox, setLightbox] = useState({ open:false, images:[], index:0 });
   function openLightbox(images, i){ setLightbox({ open:true, images, index:i||0 }); }
