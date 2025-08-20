@@ -376,6 +376,18 @@ async function deletePost(post) {
                       <div style={{ marginTop:10 }}>
                         <Button style={{ background:COLORS.navy }} onClick={()=> setEditingId(post.id)}>Bearbeiten</Button>
                       </div>
+                    {isAdmin && (
+  <div style={{ marginTop:10, display:'flex', gap:8 }}>
+    <Button style={{ background: COLORS.navy }} onClick={() => setEditingId(post.id)}>Bearbeiten</Button>
+    <Button
+      style={{ background:'#fff', color:'#b91c1c' }}
+      onClick={() => deletePost(post)}
+    >
+      Löschen
+    </Button>
+  </div>
+)}
+
                     )}
                   </>
                 )}
