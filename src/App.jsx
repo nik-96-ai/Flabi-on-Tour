@@ -355,7 +355,7 @@ function next() {
             <div style={{ fontSize: 12, color: COLORS.gray, letterSpacing: 1 }}>CARBAGE RUN 2025</div>
             <h1 style={{ fontSize: 44, margin: "8px 0 10px", color: COLORS.brand }}>Flabi on tour</h1>
             <p style={{ color: COLORS.gray, maxWidth: 560 }}>
-              <b>Wir sind „Flabi on tour“ – zwei Freunde, ein alter VW und die Lust auf ein großes Abenteuer.</b>
+              <b>Wir sind zwei Freunde, ein alter VW und die Lust auf ein großes Abenteuer.</b><br/>
               Beim Carbage Run 2025 fahren wir in mehreren Etappen quer durch Europa Richtung Balkan, schlafen im selbstgebauten Bett, kochen auf dem Campingkocher und erzählen hier täglich von Pannen, Pässen und kleinen Siegen.
               Unser Wagen ist mehr Werkstatt-Projekt als Rennwagen – mit Bett, Vorhängen und Rally-Deko – und auf der Karte kannst du unsere Position live verfolgen.
               Fotos, kurze Blog-Updates und die wichtigsten Zahlen findest du hier an einem Ort.
