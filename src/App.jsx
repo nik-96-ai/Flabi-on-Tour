@@ -817,7 +817,12 @@ export default function App() {
       <Section id="donate">
         <h2 style={{ fontSize: 26, marginBottom: 8 }}>Spenden</h2>
         <p style={{ color: COLORS.gray, marginTop: 0, marginBottom: 16 }}>
-          Unterstütze die <b>Paraplegie Schweiz</b> – wähle zwischen Zusage pro Kilometer oder einem
+          Auf unserer Rally sammeln wir Spenden zugunsten der <b>Paraplegie Schweiz</b>, damit Menschen nach
+          einem Autounfall mit paraplegischen Folgen den Weg zurück in den Alltag finden.
+          Verfolge unsere Etappen, Live-Position und unterstütze pro Kilometer oder mit einem
+          festen Beitrag. 
+          
+          Unterstütze die <b>Paraplegie Schweiz</b> – wähle zwischen Zusage pro Kilometer <b>(Wir hoffen die ganzen 2500km zu schaffen)</b> oder einem
           festen Betrag.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
