@@ -819,9 +819,6 @@ export default function App() {
         <p style={{ color: COLORS.gray, marginTop: 0, marginBottom: 16 }}>
           Auf unserer Rally sammeln wir Spenden zugunsten der <b>Paraplegie Schweiz</b>, damit Menschen nach
           einem Autounfall mit paraplegischen Folgen den Weg zurück in den Alltag finden.
-          Verfolge unsere Etappen, Live-Position und unterstütze pro Kilometer oder mit einem
-          festen Beitrag. 
-          
           Unterstütze die <b>Paraplegie Schweiz</b> – wähle zwischen Zusage pro Kilometer <b>(Wir hoffen die ganzen 2500km zu schaffen)</b> oder einem
           festen Betrag.
         </p>
