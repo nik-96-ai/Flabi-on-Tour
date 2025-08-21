@@ -268,6 +268,24 @@ export default function App() {
     loadAll();
   }
 
+  // LIGHTBOX STATE + HELPERS (fehlte zuvor)
+const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0 });
+
+function openLightbox(images, i = 0) {
+  if (!Array.isArray(images) || images.length === 0) return;
+  setLightbox({ open: true, images, index: i });
+}
+function closeLightbox() {
+  setLightbox({ open: false, images: [], index: 0 });
+}
+function prev() {
+  setLightbox(s => ({ ...s, index: (s.index - 1 + s.images.length) % s.images.length }));
+}
+function next() {
+  setLightbox(s => ({ ...s, index: (s.index + 1) % s.images.length }));
+}
+
+
   /* Assets */
   const CAR_IMG = "/car.jpg";
   const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(lat)},${encodeURIComponent(lng)}&z=6&output=embed`;
