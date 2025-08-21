@@ -355,9 +355,11 @@ function next() {
             <div style={{ fontSize: 12, color: COLORS.gray, letterSpacing: 1 }}>CARBAGE RUN 2025</div>
             <h1 style={{ fontSize: 44, margin: "8px 0 10px", color: COLORS.brand }}>Flabi on tour</h1>
             <p style={{ color: COLORS.gray, maxWidth: 560 }}>
-              Wir sammeln Spenden zugunsten der <b>Paraplegie Schweiz</b>, damit Menschen nach einem Autounfall mit
-              paraplegischen Folgen den Weg zurück in den Alltag finden. Verfolge unsere Etappen, Live-Position und
-              unterstütze pro Kilometer oder mit einem festen Beitrag.
+              <b>Wir sind „Flabi on tour“ – zwei Freunde, ein alter VW und die Lust auf ein großes Abenteuer.</b>
+              Beim Carbage Run 2025 fahren wir in mehreren Etappen quer durch Europa Richtung Balkan, schlafen im selbstgebauten Bett, kochen auf dem Campingkocher und erzählen hier täglich von Pannen, Pässen und kleinen Siegen.
+              Unser Wagen ist mehr Werkstatt-Projekt als Rennwagen – mit Bett, Vorhängen und Rally-Deko – und auf der Karte kannst du unsere Position live verfolgen.
+              Fotos, kurze Blog-Updates und die wichtigsten Zahlen findest du hier an einem Ort.
+              Wenn du uns begleiten willst, kannst du mit einer Zusage pro Kilometer oder einem festen Beitrag die Paraplegie Schweiz unterstützen.
             </p>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
               <Button onClick={() => document.getElementById("donate").scrollIntoView({ behavior: "smooth" })}>Jetzt spenden</Button>
