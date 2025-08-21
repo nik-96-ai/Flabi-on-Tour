@@ -33,7 +33,18 @@ const Button = ({ children, onClick, style, type, disabled, className }) => (
     type={type || "button"}
     onClick={onClick}
     disabled={disabled}
-    ...
+    style={{
+      height: 40,
+      padding: "0 14px",
+      borderRadius: 0,
+      border: `1px solid ${COLORS.line}`,
+      background: disabled ? "#c7cdd7" : COLORS.brand,
+      color: "white",
+      cursor: disabled ? "not-allowed" : "pointer",
+      fontWeight: 700,
+      letterSpacing: 0.2,
+      ...style,
+    }}
   >
     {children}
   </button>
