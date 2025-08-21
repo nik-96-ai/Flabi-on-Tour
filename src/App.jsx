@@ -497,7 +497,7 @@ function next() {
       <Section id="donate">
         <h2 style={{ fontSize: 26, marginBottom: 8 }}>Spenden</h2>
         <p style={{ color: COLORS.gray, marginTop: 0, marginBottom: 16 }}>
-          Auf unserer Rally sammeln wir Spenden zugunsten der Paraplegie Schweiz, damit Menschen nach einem Autounfall mit paraplegischen Folgen den Weg zurück in den Alltag finden. Unterstütze die Paraplegie Schweiz – wähle zwischen Zusage pro Kilometer (Wir hoffen die ganzen 2500km zu schaffen) oder einem festen Betrag.
+          Auf unserer Rally sammeln wir Spenden zugunsten der <b>Paraplegie Schweiz</b>, damit Menschen nach einem Autounfall mit paraplegischen Folgen den Weg zurück in den Alltag finden. Unterstütze die Paraplegie Schweiz – wähle zwischen Zusage pro Kilometer <b>(Wir hoffen die ganzen 2500km zu schaffen)</b> oder einem festen Betrag.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div style={{ border: `1px solid ${COLORS.line}`, background: "#fff", padding: 16 }}>
