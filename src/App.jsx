@@ -26,16 +26,15 @@ const Section = ({ id, children, style }) => (
     <Container>{children}</Container>
   </section>
 );
-// vorher: const Button = ({ children, onClick, style, type, disabled }) => (
+
 const Button = ({ children, onClick, style, type, disabled, className }) => (
   <button
-    className={className}
+    className={`btn ${className || ""}`}
     type={type || "button"}
     onClick={onClick}
     disabled={disabled}
     style={{
-      height: 40,
-      padding: "0 14px",
+      padding: "10px 14px",
       borderRadius: 0,
       border: `1px solid ${COLORS.line}`,
       background: disabled ? "#c7cdd7" : COLORS.brand,
@@ -49,7 +48,6 @@ const Button = ({ children, onClick, style, type, disabled, className }) => (
     {children}
   </button>
 );
-
 
 /* Input/Textarea bewusst ohne Radius */
 const Input = (props) => (
@@ -90,44 +88,63 @@ const storagePathFromPublicUrl = (url) => {
 
 /* ---------- APP ---------- */
 export default function App() {
-  /* Inject global CSS (Fonts + Responsive + moderne Optik) */
+  /* Global CSS (Fonts + Responsive) */
   const global = `
-    :root { --ink:${COLORS.ink}; --gray:${COLORS.gray}; --line:${COLORS.line}; --brand:${COLORS.brand}; }
+    :root { --ink:${COLORS.ink}; --gray:${COLORS.gray}; --line:${COLORS.line}; --brand:${COLORS.brand}; --alert:${COLORS.alert}; }
     * { box-sizing: border-box; }
     html,body,#root { margin:0; min-height:100%; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: var(--ink); }
     h1,h2,h3 { margin:0; font-weight:800; letter-spacing:-.01em; }
     p { margin:0; }
     img { display:block; max-width:100%; }
-    /* Header Brand – puristisch/dynamisch */
+
+    /* Brand */
     .brand { font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
     .brand .muted { color: var(--gray); font-weight:700; }
-    /* Navbar Ghost-Button (Admin) */
-    .btn-ghost { background:transparent !important; color:var(--gray) !important; border:1px solid var(--line); height:32px !important; }
+
+    /* Buttons */
+    .btn { background: var(--brand); color:#fff; }
+    .btn-ghost { background:#fff !important; color:var(--gray) !important; border:1px solid var(--line); }
     .btn-ghost:hover { color:var(--ink) !important; }
-    /* Hero Layout */
-    .hero { display:grid; grid-template-columns: 1.2fr 1fr; gap:0; }
+
+    /* Hero */
+    .hero { display:grid; grid-template-columns: 1.2fr 1fr; gap:0; border:1px solid var(--line); background:#fff; }
     .hero-media { display:grid; place-items:center; background:#f3f4f6; min-height:420px; }
     .hero-media img { max-height:100%; object-fit:contain; }
-    /* Post-Karte (ohne Rundungen) */
-    .post-card { border:1px solid var(--line); }
-    .gallery { display:grid; grid-template-columns: 2fr 1fr; gap:12px; }
-    .thumbs { display:grid; gap:8px; }
-    .thumbs img { height:120px; object-fit:cover; cursor:pointer; }
-    .mainimg { height:420px; object-fit:cover; }
-    /* Keine weißen Ränder um Bilder */
-    .gallery, .thumbs, .mainimg { background:#0000; }
+
+    /* Post-Karte */
+    .post-card { border:1px solid var(--line); background:#fff; }
+
+    /* Galerie-Layout: 1 groß links, 4 kleine rechts (2x2) */
+    .gallery { display:grid; grid-template-columns: 1fr 1fr; gap:12px; padding:12px; }
+    .gallery-left { grid-column: 1 / span 1; }
+    .gallery-right { grid-column: 2 / span 1; display:grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap:8px; }
+    .mainimg { width:100%; height:420px; object-fit:cover; }
+    .thumb { width:100%; height:calc((420px - 8px)/2); object-fit:cover; position:relative; cursor:pointer; }
+    .more-overlay { position:absolute; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.45); color:#fff; font-weight:800; font-size:18px; letter-spacing:.04em; }
+
     /* Map */
     .mapframe { width:100%; height:420px; border:0; }
+
+    /* Donate grids */
+    .donate-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    .donate-list { display:grid; gap:8px; }
+
     /* Mobile */
     @media (max-width: 900px) {
       .hero { grid-template-columns: 1fr; }
       .hero-media { min-height: 280px; }
-      .gallery { grid-template-columns: 1fr; }
-      .thumbs { display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; }
-      .thumbs img { width:46vw; height:28vw; min-width:180px; }
-      .mainimg { height:58vw; }
       .mapframe { height:300px; }
-      .admin-right { display:none; }
+      .donate-grid { grid-template-columns: 1fr; }
+
+      /* Galerie mobil: erst das große, darunter Thumbs als zweispaltiges Grid */
+      .gallery { grid-template-columns: 1fr; }
+      .gallery-left { grid-column: auto; }
+      .gallery-right { grid-column: auto; grid-template-columns: 1fr 1fr; }
+      .mainimg { height:58vw; }
+      .thumb { height:30vw; }
+
+      /* Buttons dürfen umbrechen */
+      .btn { white-space: normal; line-height: 1.2; }
     }
   `;
 
@@ -147,8 +164,7 @@ export default function App() {
 
   async function tryLogin() {
     const { error } = await supabase.auth.signInWithPassword({
-      email: adminEmail,
-      password: adminPass,
+      email: adminEmail, password: adminPass,
     });
     if (error) alert("Login fehlgeschlagen: " + error.message);
     else { setAskPass(false); setAdminPass(""); }
@@ -162,7 +178,9 @@ export default function App() {
 
   const [lat, setLat] = useState("47.3769");
   const [lng, setLng] = useState("8.5417");
+  const [place, setPlace] = useState(""); // Ort/Adresse (optional)
   const [km, setKm] = useState(0);
+
   const [pledges, setPledges] = useState([]);
   const [fixeds, setFixeds] = useState([]);
 
@@ -180,7 +198,13 @@ export default function App() {
     setBlogs(a.data || []);
     setPledges(b.data || []);
     setFixeds(c.data || []);
-    const st = d.data; if (st) { setLat(String(st.lat ?? "")); setLng(String(st.lng ?? "")); setKm(Number(st.km || 0)); }
+    const st = d.data;
+    if (st) {
+      setLat(st.lat != null ? String(st.lat) : "");
+      setLng(st.lng != null ? String(st.lng) : "");
+      setPlace(st.place || "");
+      setKm(Number(st.km || 0));
+    }
   }
   useEffect(() => { loadAll(); }, []);
 
@@ -212,9 +236,14 @@ export default function App() {
 
   async function updateStatus() {
     if (!isAdmin) return;
-    const { error } = await supabase.from("status").update({
-      lat: parseFloat(lat), lng: parseFloat(lng), km: Number(km), updated_at: new Date().toISOString(),
-    }).eq("id", 1);
+    const payload = {
+      lat: lat ? parseFloat(lat) : null,
+      lng: lng ? parseFloat(lng) : null,
+      place: place || null,
+      km: Number(km),
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("status").update(payload).eq("id", 1);
     if (error) return alert(error.message);
     loadAll();
   }
@@ -240,10 +269,25 @@ export default function App() {
     loadAll();
   }
 
-  /* Edit/Delete */
+  // Admin: Zusagen löschen
+  async function deletePledge(id) {
+    if (!isAdmin) return;
+    const { error } = await supabase.from("pledges_per_km").delete().eq("id", id);
+    if (error) return alert(error.message);
+    loadAll();
+  }
+  async function deleteFixed(id) {
+    if (!isAdmin) return;
+    const { error } = await supabase.from("donations_fixed").delete().eq("id", id);
+    if (error) return alert(error.message);
+    loadAll();
+  }
+
+  /* Edit/Delete Posts */
   const [editingId, setEditingId] = useState(null);
   const editingPost = useMemo(() => blogs.find((b) => b.id === editingId), [editingId, blogs]);
   const [editEntry, setEditEntry] = useState({ title: "", text: "", images: [] });
+
   useEffect(() => {
     if (editingPost)
       setEditEntry({
@@ -279,34 +323,27 @@ export default function App() {
     loadAll();
   }
 
-  // LIGHTBOX STATE + HELPERS (fehlte zuvor)
-const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0 });
+  /* Lightbox */
+  const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0 });
+  function openLightbox(images, i = 0) {
+    if (!Array.isArray(images) || images.length === 0) return;
+    setLightbox({ open: true, images, index: i });
+  }
+  function closeLightbox() { setLightbox({ open: false, images: [], index: 0 }); }
+  function prev() { setLightbox(s => ({ ...s, index: (s.index - 1 + s.images.length) % s.images.length })); }
+  function next() { setLightbox(s => ({ ...s, index: (s.index + 1) % s.images.length })); }
 
-function openLightbox(images, i = 0) {
-  if (!Array.isArray(images) || images.length === 0) return;
-  setLightbox({ open: true, images, index: i });
-}
-function closeLightbox() {
-  setLightbox({ open: false, images: [], index: 0 });
-}
-function prev() {
-  setLightbox(s => ({ ...s, index: (s.index - 1 + s.images.length) % s.images.length }));
-}
-function next() {
-  setLightbox(s => ({ ...s, index: (s.index + 1) % s.images.length }));
-}
-
-
-  /* Assets */
+  /* Assets & Map */
   const CAR_IMG = "/car.jpg";
-  const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(lat)},${encodeURIComponent(lng)}&z=6&output=embed`;
+  const mapQuery = (place && place.trim()) ? place : `${lat},${lng}`;
+  const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=6&output=embed`;
 
   return (
     <div style={{ background: "#f6f7fb", minHeight: "100vh" }}>
       {/* global styles + font */}
-      <link rel="preconnect" href="https://fonts.googleapis.com"/>
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous"/>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
       <style>{global}</style>
 
       {/* NAVBAR */}
@@ -321,7 +358,7 @@ function next() {
               <a href="#map" style={{ color: COLORS.gray, textDecoration: "none" }}>Karte</a>
               <a href="#donate" style={{ color: COLORS.gray, textDecoration: "none" }}>Spenden</a>
               {!isAdmin ? (
-                <Button style={{ borderColor: COLORS.line }} className="btn-ghost" onClick={() => setAskPass(true)}>Admin</Button>
+                <Button className="btn-ghost" style={{ color: COLORS.gray }} onClick={() => setAskPass(true)}>Admin</Button>
               ) : (
                 <Button className="btn-ghost" onClick={logout}>Logout</Button>
               )}
@@ -342,7 +379,7 @@ function next() {
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
               <Button onClick={tryLogin}>Einloggen</Button>
-              <Button style={{ background: "#fff", color: COLORS.ink }} onClick={() => setAskPass(false)}>Abbrechen</Button>
+              <Button className="btn-ghost" onClick={() => setAskPass(false)} style={{ color: COLORS.ink }}>Abbrechen</Button>
             </div>
           </div>
         </div>
@@ -350,21 +387,18 @@ function next() {
 
       {/* HERO */}
       <Section id="home" style={{ paddingTop: 28 }}>
-        <div className="hero" style={{ border: `1px solid ${COLORS.line}`, background: "#fff" }}>
+        <div className="hero">
           <div style={{ padding: 24 }}>
             <div style={{ fontSize: 12, color: COLORS.gray, letterSpacing: 1 }}>CARBAGE RUN 2025</div>
             <h1 style={{ fontSize: 44, margin: "8px 0 10px", color: COLORS.brand }}>Flabi on tour</h1>
             <p style={{ color: COLORS.gray, maxWidth: 560 }}>
-              <b>Wir sind zwei Freunde, ein alter VW und die Lust auf ein großes Abenteuer.</b><br/>
-              Beim Carbage Run 2025 fahren wir in mehreren Etappen quer durch Europa Richtung Balkan, schlafen im selbstgebauten Bett, kochen auf dem Campingkocher und erzählen hier täglich von Pannen, Pässen und kleinen Siegen.
-              Unser Wagen ist mehr Werkstatt-Projekt als Rennwagen – mit Bett, Vorhängen und Rally-Deko.<br/>
-              Auf der Karte kannst du unsere Position live verfolgen.
-              Fotos, kurze Blog-Updates und die wichtigsten Zahlen findest du hier an einem Ort.<br/>
-              Wenn du uns begleiten willst, kannst du mit einer Zusage pro Kilometer oder einem festen Beitrag die Paraplegie Schweiz unterstützen.
+              Wir sammeln Spenden zugunsten der <b>Paraplegie Schweiz</b>, damit Menschen nach einem Autounfall mit
+              paraplegischen Folgen den Weg zurück in den Alltag finden. Verfolge unsere Etappen, Live-Position und
+              unterstütze pro Kilometer oder mit einem festen Beitrag.
             </p>
-            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
               <Button onClick={() => document.getElementById("donate").scrollIntoView({ behavior: "smooth" })}>Jetzt spenden</Button>
-              <Button onClick={() => document.getElementById("map").scrollIntoView({ behavior: "smooth" })} style={{ background: "#fff", color: COLORS.ink }}>
+              <Button className="btn-ghost" onClick={() => document.getElementById("map").scrollIntoView({ behavior: "smooth" })} style={{ color: COLORS.ink }}>
                 Karte ansehen
               </Button>
             </div>
@@ -375,13 +409,11 @@ function next() {
         </div>
       </Section>
 
-      {/* BLOG – Editor nur für Admin sichtbar */}
+      {/* BLOG – Editor nur für Admin */}
       <Section id="blog">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <h2 style={{ fontSize: 26, margin: 0 }}>Rally Blog</h2>
-          {isAdmin && (
-            <Button onClick={addBlog} disabled={!isAdmin || uploading}>＋ Eintrag speichern</Button>
-          )}
+          {isAdmin && <Button onClick={addBlog} disabled={uploading}>＋ Eintrag speichern</Button>}
         </div>
 
         {isAdmin && (
@@ -416,63 +448,94 @@ function next() {
 
         {/* Posts */}
         <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
-          {blogs.map((post) => (
-            <div key={post.id} className="post-card" style={{ background: "#fff" }}>
-              {/* Galerie ohne weiße Ränder */}
-              {Array.isArray(post.images) && post.images.length > 0 && (
-                <div className="gallery" style={{ padding: 12 }}>
-                  <img
-                    src={post.images[0]}
-                    alt="main"
-                    className="mainimg"
-                    onClick={() => openLightbox(post.images, 0)}
-                  />
-                  <div className="thumbs">
-                    {post.images.slice(1).map((u, idx) => (
-                      <img key={idx} src={u} alt={`img-${idx + 1}`} onClick={() => openLightbox(post.images, idx + 1)} />
-                    ))}
-                  </div>
-                </div>
-              )}
+          {blogs.map((post) => {
+            const imgs = Array.isArray(post.images) ? post.images : [];
+            const rightThumbs = imgs.slice(1, 5); // maximal 4
+            const extraCount = Math.max(0, imgs.length - 5);
 
-              <div style={{ padding: 16, borderTop: `1px solid ${COLORS.line}` }}>
-                {editingId === post.id ? (
-                  <div>
-                    <Input value={editEntry.title} onChange={(e) => setEditEntry((s) => ({ ...s, title: e.target.value }))} />
-                    <Textarea rows={4} style={{ marginTop: 8 }} value={editEntry.text} onChange={(e) => setEditEntry((s) => ({ ...s, text: e.target.value }))} />
-                    <div style={{ marginTop: 8 }}>
-                      <div style={{ fontSize: 12, marginBottom: 6 }}>Weitere Bilder hinzufügen</div>
-                      <input type="file" accept="image/*" multiple disabled={uploading} onChange={async (e) => { const files = Array.from(e.target.files || []); if (!files.length) return; setUploading(true); const urls = await uploadImages(files); setEditEntry((s) => ({ ...s, images: [...s.images, ...urls] })); setUploading(false); }} />
-                      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                        {(editEntry.images || []).map((u, i) => (
-                          <div key={i} style={{ position: "relative" }}>
-                            <img src={u} alt="thumb" style={{ width: 90, height: 70, objectFit: "cover", border: `1px solid ${COLORS.line}` }} />
-                            <button onClick={() => setEditEntry((s) => ({ ...s, images: s.images.filter((_, x) => x !== i) }))} style={{ position: "absolute", top: -6, right: -6, background: "#000", color: "#fff", border: "none", width: 20, height: 20, cursor: "pointer" }}>×</button>
-                          </div>
-                        ))}
-                      </div>
+            return (
+              <div key={post.id} className="post-card">
+                {/* Galerie: 1 groß links, 4 kleine rechts */}
+                {imgs.length > 0 && (
+                  <div className="gallery">
+                    <div className="gallery-left">
+                      <img
+                        src={imgs[0]}
+                        alt="main"
+                        className="mainimg"
+                        onClick={() => openLightbox(imgs, 0)}
+                      />
                     </div>
-                    <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                      <Button onClick={saveEdit}>Speichern</Button>
-                      <Button style={{ background: "#fff", color: COLORS.ink }} onClick={() => setEditingId(null)}>Abbrechen</Button>
+                    <div className="gallery-right">
+                      {rightThumbs.map((u, idx) => {
+                        const isLast = idx === rightThumbs.length - 1 && extraCount > 0;
+                        const globalIndex = idx + 1; // Lightbox-Index
+                        return (
+                          <div key={idx} style={{ position: "relative" }}>
+                            <img
+                              src={u}
+                              alt={`img-${idx + 1}`}
+                              className="thumb"
+                              onClick={() => openLightbox(imgs, globalIndex)}
+                            />
+                            {isLast && (
+                              <div className="more-overlay" onClick={() => openLightbox(imgs, globalIndex)}>
+                                +{extraCount}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                ) : (
-                  <>
-                    <h3 style={{ margin: 0 }}>{post.title}</h3>
-                    <p style={{ color: COLORS.gray, marginTop: 8 }}>{post.text}</p>
-                    {post.created_at && <p style={{ color: COLORS.gray, fontSize: 12, marginTop: 8 }}>{new Date(post.created_at).toLocaleString()}</p>}
-                    {isAdmin && (
-                      <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                        <Button className="btn-ghost" onClick={() => setEditingId(post.id)} style={{ color: COLORS.ink, background: "#fff" }}>Bearbeiten</Button>
-                        <Button className="btn-ghost" onClick={() => deletePost(post)} style={{ color: COLORS.alert, background: "#fff" }}>Löschen</Button>
-                      </div>
-                    )}
-                  </>
                 )}
+
+                <div style={{ padding: 16, borderTop: `1px solid ${COLORS.line}` }}>
+                  {editingId === post.id ? (
+                    <div>
+                      <Input value={editEntry.title} onChange={(e) => setEditEntry((s) => ({ ...s, title: e.target.value }))} />
+                      <Textarea rows={4} style={{ marginTop: 8 }} value={editEntry.text} onChange={(e) => setEditEntry((s) => ({ ...s, text: e.target.value }))} />
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ fontSize: 12, marginBottom: 6 }}>Weitere Bilder hinzufügen</div>
+                        <input type="file" accept="image/*" multiple disabled={uploading} onChange={async (e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (!files.length) return;
+                          setUploading(true);
+                          const urls = await uploadImages(files);
+                          setEditEntry((s) => ({ ...s, images: [...s.images, ...urls] }));
+                          setUploading(false);
+                        }} />
+                        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                          {(editEntry.images || []).map((u, i) => (
+                            <div key={i} style={{ position: "relative" }}>
+                              <img src={u} alt="thumb" style={{ width: 90, height: 70, objectFit: "cover", border: `1px solid ${COLORS.line}` }} />
+                              <button onClick={() => setEditEntry((s) => ({ ...s, images: s.images.filter((_, x) => x !== i) }))} style={{ position: "absolute", top: -6, right: -6, background: "#000", color: "#fff", border: "none", width: 20, height: 20, cursor: "pointer" }}>×</button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                        <Button onClick={saveEdit}>Speichern</Button>
+                        <Button className="btn-ghost" onClick={() => setEditingId(null)} style={{ color: COLORS.ink }}>Abbrechen</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <h3 style={{ margin: 0 }}>{post.title}</h3>
+                      <p style={{ color: COLORS.gray, marginTop: 8, whiteSpace: "pre-line" }}>{post.text}</p>
+                      {post.created_at && <p style={{ color: COLORS.gray, fontSize: 12, marginTop: 8 }}>{new Date(post.created_at).toLocaleString()}</p>}
+                      {isAdmin && (
+                        <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                          <Button className="btn-ghost" onClick={() => setEditingId(post.id)} style={{ color: COLORS.ink }}>Bearbeiten</Button>
+                          <Button className="btn-ghost" onClick={() => deletePost(post)} style={{ color: COLORS.alert }}>Löschen</Button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {blogs.length === 0 && <p style={{ color: COLORS.gray }}>Noch keine Einträge. Fangt mit einem Update an!</p>}
         </div>
       </Section>
@@ -483,15 +546,26 @@ function next() {
         <div style={{ border: `1px solid ${COLORS.line}`, background: "#fff" }}>
           <iframe title="google-map" src={mapSrc} className="mapframe" loading="lazy" allowFullScreen />
         </div>
+
+        {/* Kilometer unter der Karte (öffentlich) */}
+        <div style={{ border: `1px solid ${COLORS.line}`, background: "#fff", marginTop: 12, padding: 16 }}>
+          <b>Gefahrene Kilometer:</b> {Number(km || 0).toLocaleString()} km
+        </div>
+
+        {/* Admin-Update */}
         {isAdmin && (
           <div style={{ border: `1px solid ${COLORS.line}`, background: "#fff", marginTop: 12, padding: 16 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, alignItems: "end" }}>
               <div><div style={{ fontSize: 12, marginBottom: 6 }}>Lat</div><Input value={lat} onChange={(e) => setLat(e.target.value)} /></div>
               <div><div style={{ fontSize: 12, marginBottom: 6 }}>Lng</div><Input value={lng} onChange={(e) => setLng(e.target.value)} /></div>
-              <div><div style={{ fontSize: 12, marginBottom: 6 }}>Gefahrene km</div><Input type="number" min={0} value={km} onChange={(e) => setKm(e.target.value)} /></div>
-              <Button onClick={updateStatus}>Update speichern</Button>
+              <div><div style={{ fontSize: 12, marginBottom: 6 }}>Ort/Adresse (optional)</div><Input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="z. B. Sarajevo, BIH" /></div>
+              <Button onClick={updateStatus}>Pin/Status speichern</Button>
             </div>
-            <p style={{ color: COLORS.gray, marginTop: 10 }}>Aktuell: {parseFloat(lat).toFixed(4)}° N, {parseFloat(lng).toFixed(4)}° E</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "end", marginTop: 10 }}>
+              <div><div style={{ fontSize: 12, marginBottom: 6 }}>Gefahrene km</div><Input type="number" min={0} value={km} onChange={(e) => setKm(e.target.value)} /></div>
+              <div />
+            </div>
+            <p style={{ color: COLORS.gray, marginTop: 10 }}>Anzeige nutzt <code>{place ? "Ort/Adresse" : "Lat/Lng"}</code>.</p>
           </div>
         )}
       </Section>
@@ -500,9 +574,10 @@ function next() {
       <Section id="donate">
         <h2 style={{ fontSize: 26, marginBottom: 8 }}>Spenden</h2>
         <p style={{ color: COLORS.gray, marginTop: 0, marginBottom: 16 }}>
-          Auf unserer Rally sammeln wir Spenden zugunsten der <b>Paraplegie Schweiz</b>, damit Menschen nach einem Autounfall mit paraplegischen Folgen den Weg zurück in den Alltag finden. Unterstütze die Paraplegie Schweiz – wähle zwischen Zusage pro Kilometer <b>(Wir hoffen die ganzen 2500km zu schaffen)</b> oder einem festen Betrag.
+          Unterstütze die <b>Paraplegie Schweiz</b> – wähle zwischen Zusage pro Kilometer oder einem festen Betrag.
         </p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+
+        <div className="donate-grid">
           <div style={{ border: `1px solid ${COLORS.line}`, background: "#fff", padding: 16 }}>
             <h3 style={{ marginTop: 0 }}>Zusage pro Kilometer</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -522,24 +597,33 @@ function next() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
+        <div className="donate-grid" style={{ marginTop: 16 }}>
           <div style={{ border: `1px solid ${COLORS.line}`, background: "#fff", padding: 16 }}>
             <div style={{ fontSize: 12, color: COLORS.gray }}>Summe Zusagen pro km</div>
             <div style={{ fontSize: 36, fontWeight: 800, color: COLORS.brand }}>CHF {totalPerKm.toFixed(2)}</div>
             <div style={{ fontSize: 12, color: COLORS.gray, marginTop: 8 }}>Prognose gesamt (km × pro-km + feste Beträge)</div>
             <div style={{ fontSize: 28, fontWeight: 800 }}>CHF {projected.toFixed(2)}</div>
           </div>
+
           <div style={{ border: `1px solid ${COLORS.line}`, background: "#fff", padding: 16 }}>
             <h3 style={{ marginTop: 0 }}>Alle Zusagen</h3>
-            <div style={{ display: "grid", gap: 8 }}>
+            <div className="donate-list">
               {pledges.map((p) => (
-                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", border: `1px solid ${COLORS.line}`, padding: 10 }}>
-                  <span>{p.name}</span><b>CHF {Number(p.amount_per_km).toFixed(2)} / km</b>
+                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: `1px solid ${COLORS.line}`, padding: 10 }}>
+                  <span>{p.name}</span>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <b>CHF {Number(p.amount_per_km).toFixed(2)} / km</b>
+                    {isAdmin && <Button className="btn-ghost" style={{ color: COLORS.alert }} onClick={() => deletePledge(p.id)}>Löschen</Button>}
+                  </div>
                 </div>
               ))}
               {fixeds.map((p) => (
-                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", border: `1px solid ${COLORS.line}`, padding: 10 }}>
-                  <span>{p.name}</span><b>CHF {Number(p.amount).toFixed(2)} einmalig</b>
+                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: `1px solid ${COLORS.line}`, padding: 10 }}>
+                  <span>{p.name}</span>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <b>CHF {Number(p.amount).toFixed(2)} einmalig</b>
+                    {isAdmin && <Button className="btn-ghost" style={{ color: COLORS.alert }} onClick={() => deleteFixed(p.id)}>Löschen</Button>}
+                  </div>
                 </div>
               ))}
               {pledges.length + fixeds.length === 0 && <p style={{ color: COLORS.gray }}>Noch keine Zusagen – sei die/der Erste!</p>}
@@ -557,8 +641,8 @@ function next() {
           </button>
           {lightbox.images.length > 1 && (
             <>
-              <button onClick={() => setLightbox(s => ({ ...s, index: (s.index - 1 + s.images.length) % s.images.length }))} style={{ position: "fixed", left: 20, top: "50%", transform: "translateY(-50%)", background: "#000", color: "#fff", border: "none", width: 44, height: 44, cursor: "pointer" }}>‹</button>
-              <button onClick={() => setLightbox(s => ({ ...s, index: (s.index + 1) % s.images.length }))} style={{ position: "fixed", right: 20, top: "50%", transform: "translateY(-50%)", background: "#000", color: "#fff", border: "none", width: 44, height: 44, cursor: "pointer" }}>›</button>
+              <button onClick={prev} style={{ position: "fixed", left: 20, top: "50%", transform: "translateY(-50%)", background: "#000", color: "#fff", border: "none", width: 44, height: 44, cursor: "pointer" }}>‹</button>
+              <button onClick={next} style={{ position: "fixed", right: 20, top: "50%", transform: "translateY(-50%)", background: "#000", color: "#fff", border: "none", width: 44, height: 44, cursor: "pointer" }}>›</button>
             </>
           )}
         </div>
