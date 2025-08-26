@@ -162,13 +162,42 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  async function useAdminLocation(save = false) {
+  if (!navigator.geolocation) {
+    alert('Geolocation wird vom Browser nicht unterstützt.');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const la = pos.coords.latitude;
+    const lo = pos.coords.longitude;
+    setLat(String(la));
+    setLng(String(lo));
+    setPlace(""); // wichtig: Ort deaktivieren, damit Lat/Lng wirken
+
+    if (save) {
+      const { error } = await supabase.from("status").update({
+        lat: la,
+        lng: lo,
+        place: null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", 1);
+      if (error) alert(error.message); else loadAll();
+    }
+  }, (err) => {
+    alert("Standort konnte nicht ermittelt werden: " + err.message);
+  }, { enableHighAccuracy: true, maximumAge: 60000, timeout: 10000 });
+}
+
   async function tryLogin() {
     const { error } = await supabase.auth.signInWithPassword({
       email: adminEmail, password: adminPass,
     });
     if (error) alert("Login fehlgeschlagen: " + error.message);
-    else { setAskPass(false); setAdminPass(""); }
-  }
+    else { 
+  setAskPass(false); 
+  setAdminPass(""); 
+  useAdminLocation(true); // Standort holen & speichern
+}
   async function logout() { await supabase.auth.signOut(); }
 
   /* Data */
