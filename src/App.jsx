@@ -162,32 +162,6 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  async function useAdminLocation(save = false) {
-  if (!navigator.geolocation) {
-    alert('Geolocation wird vom Browser nicht unterstützt.');
-    return;
-  }
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-    const la = pos.coords.latitude;
-    const lo = pos.coords.longitude;
-    setLat(String(la));
-    setLng(String(lo));
-    setPlace(""); // wichtig: Ort deaktivieren, damit Lat/Lng wirken
-
-    if (save) {
-      const { error } = await supabase.from("status").update({
-        lat: la,
-        lng: lo,
-        place: null,
-        updated_at: new Date().toISOString(),
-      }).eq("id", 1);
-      if (error) alert(error.message); else loadAll();
-    }
-  }, (err) => {
-    alert("Standort konnte nicht ermittelt werden: " + err.message);
-  }, { enableHighAccuracy: true, maximumAge: 60000, timeout: 10000 });
-}
-
   async function tryLogin() {
     const { error } = await supabase.auth.signInWithPassword({
       email: adminEmail, password: adminPass,
@@ -351,7 +325,33 @@ export default function App() {
     if (error) return alert(error.message);
     loadAll();
   }
+  async function useAdminLocation(save = false) {
+  if (!navigator.geolocation) {
+    alert('Geolocation wird vom Browser nicht unterstützt.');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const la = pos.coords.latitude;
+    const lo = pos.coords.longitude;
+    setLat(String(la));
+    setLng(String(lo));
+    setPlace(""); // wichtig: Ort deaktivieren, damit Lat/Lng wirken
 
+    if (save) {
+      const { error } = await supabase.from("status").update({
+        lat: la,
+        lng: lo,
+        place: null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", 1);
+      if (error) alert(error.message); else loadAll();
+    }
+  }, (err) => {
+    alert("Standort konnte nicht ermittelt werden: " + err.message);
+  }, { enableHighAccuracy: true, maximumAge: 60000, timeout: 10000 });
+}
+
+    
   /* Lightbox */
   const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0 });
   function openLightbox(images, i = 0) {
@@ -590,6 +590,11 @@ export default function App() {
               <div><div style={{ fontSize: 12, marginBottom: 6 }}>Lng</div><Input value={lng} onChange={(e) => setLng(e.target.value)} /></div>
               <div><div style={{ fontSize: 12, marginBottom: 6 }}>Ort/Adresse (optional)</div><Input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="z. B. Sarajevo, BIH" /></div>
               <Button onClick={updateStatus}>Pin/Status speichern</Button>
+              <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
+  <Button onClick={() => useAdminLocation(true)}>Standort übernehmen</Button>
+  <Button className="btn-ghost" onClick={() => setPlace("")} style={{ color: COLORS.ink }}>
+    Ort/Adresse ignorieren
+  </Button>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "end", marginTop: 10 }}>
               <div><div style={{ fontSize: 12, marginBottom: 6 }}>Gefahrene km</div><Input type="number" min={0} value={km} onChange={(e) => setKm(e.target.value)} /></div>
