@@ -363,7 +363,7 @@ export default function App() {
   function next() { setLightbox(s => ({ ...s, index: (s.index + 1) % s.images.length })); }
 
   /* Assets & Map */
-  const CAR_IMG = "/car.jpg";
+  const CAR_IMG = "/main.jpg";
   const mapQuery = (place && place.trim()) ? place : `${lat},${lng}`;
   const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=6&output=embed`;
 
