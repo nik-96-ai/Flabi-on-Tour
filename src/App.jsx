@@ -164,15 +164,21 @@ export default function App() {
 
   async function tryLogin() {
     const { error } = await supabase.auth.signInWithPassword({
-      email: adminEmail, password: adminPass,
+      email: adminEmail,
+      password: adminPass,
     });
-    if (error) alert("Login fehlgeschlagen: " + error.message);
-    else { 
-  setAskPass(false); 
-  setAdminPass(""); 
-  useAdminLocation(true); // Standort holen & speichern
-}
-  async function logout() { await supabase.auth.signOut(); }
+    if (error) {
+      alert("Login fehlgeschlagen: " + error.message);
+    } else {
+      setAskPass(false);
+      setAdminPass("");
+      useAdminLocation(true); // Standort holen & speichern
+    }
+  }
+
+  async function logout() {
+    await supabase.auth.signOut();
+  }
 
   /* Data */
   const [blogs, setBlogs] = useState([]);
@@ -209,7 +215,9 @@ export default function App() {
       setKm(Number(st.km || 0));
     }
   }
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    loadAll();
+  }, []);
 
   /* Upload */
   async function uploadImages(files) {
@@ -218,7 +226,10 @@ export default function App() {
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
       const path = `posts/${uid()}.${ext}`;
       const { error } = await supabase.storage.from("flabi").upload(path, file, { cacheControl: "3600", upsert: false });
-      if (error) { alert("Upload fehlgeschlagen: " + error.message); continue; }
+      if (error) {
+        alert("Upload fehlgeschlagen: " + error.message);
+        continue;
+      }
       const { data } = supabase.storage.from("flabi").getPublicUrl(path);
       urls.push(data.publicUrl);
     }
@@ -230,7 +241,9 @@ export default function App() {
     if (!isAdmin) return alert("Nur Admin darf Blogeinträge erstellen.");
     if (!newEntry.title || !newEntry.text) return;
     const { error } = await supabase.from("posts").insert({
-      title: newEntry.title, text: newEntry.text, images: newEntry.images,
+      title: newEntry.title,
+      text: newEntry.text,
+      images: newEntry.images,
     });
     if (error) return alert(error.message);
     setNewEntry({ title: "", text: "", images: [] });
@@ -302,11 +315,14 @@ export default function App() {
 
   async function saveEdit() {
     if (!isAdmin || !editingId) return;
-    const { error } = await supabase.from("posts")
+    const { error } = await supabase
+      .from("posts")
       .update({ title: editEntry.title, text: editEntry.text, images: editEntry.images })
       .eq("id", editingId);
     if (error) return alert(error.message);
-    setEditingId(null); setEditEntry({ title: "", text: "", images: [] }); loadAll();
+    setEditingId(null);
+    setEditEntry({ title: "", text: "", images: [] });
+    loadAll();
   }
 
   async function addEditImages(files) {
@@ -320,51 +336,70 @@ export default function App() {
     if (!isAdmin) return;
     if (!confirm("Diesen Post wirklich löschen?")) return;
     const paths = (post.images || []).map(storagePathFromPublicUrl).filter(Boolean);
-    if (paths.length) { try { await supabase.storage.from("flabi").remove(paths); } catch {} }
+    if (paths.length) {
+      try {
+        await supabase.storage.from("flabi").remove(paths);
+      } catch {}
+    }
     const { error } = await supabase.from("posts").delete().eq("id", post.id);
     if (error) return alert(error.message);
     loadAll();
   }
+
   async function useAdminLocation(save = false) {
-  if (!navigator.geolocation) {
-    alert('Geolocation wird vom Browser nicht unterstützt.');
-    return;
-  }
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-    const la = pos.coords.latitude;
-    const lo = pos.coords.longitude;
-    setLat(String(la));
-    setLng(String(lo));
-    setPlace(""); // wichtig: Ort deaktivieren, damit Lat/Lng wirken
-
-    if (save) {
-      const { error } = await supabase.from("status").update({
-        lat: la,
-        lng: lo,
-        place: null,
-        updated_at: new Date().toISOString(),
-      }).eq("id", 1);
-      if (error) alert(error.message); else loadAll();
+    if (!navigator.geolocation) {
+      alert("Geolocation wird vom Browser nicht unterstützt.");
+      return;
     }
-  }, (err) => {
-    alert("Standort konnte nicht ermittelt werden: " + err.message);
-  }, { enableHighAccuracy: true, maximumAge: 60000, timeout: 10000 });
-}
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const la = pos.coords.latitude;
+        const lo = pos.coords.longitude;
+        setLat(String(la));
+        setLng(String(lo));
+        setPlace(""); // wichtig: Ort deaktivieren, damit Lat/Lng wirken
 
-    
+        if (save) {
+          const { error } = await supabase
+            .from("status")
+            .update({
+              lat: la,
+              lng: lo,
+              place: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", 1);
+          if (error) alert(error.message);
+          else loadAll();
+        }
+      },
+      (err) => {
+        alert("Standort konnte nicht ermittelt werden: " + err.message);
+      },
+      { enableHighAccuracy: true, maximumAge: 60000, timeout: 10000 }
+    );
+  }
+
   /* Lightbox */
   const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0 });
   function openLightbox(images, i = 0) {
     if (!Array.isArray(images) || images.length === 0) return;
     setLightbox({ open: true, images, index: i });
   }
-  function closeLightbox() { setLightbox({ open: false, images: [], index: 0 }); }
-  function prev() { setLightbox(s => ({ ...s, index: (s.index - 1 + s.images.length) % s.images.length })); }
-  function next() { setLightbox(s => ({ ...s, index: (s.index + 1) % s.images.length })); }
+  function closeLightbox() {
+    setLightbox({ open: false, images: [], index: 0 });
+  }
+  function prev() {
+    setLightbox((s) => ({ ...s, index: (s.index - 1 + s.images.length) % s.images.length }));
+  }
+  function next() {
+    setLightbox((s) => ({ ...s, index: (s.index + 1) % s.images.length }));
+  }
 
   /* Assets & Map */
   const CAR_IMG = "/main.jpg";
-  const mapQuery = (place && place.trim()) ? place : `${lat},${lng}`;
+  // Prefer Lat/Lng when available; fallback to place; default Zurich coords
+  const mapQuery = (lat && lng) ? `${lat},${lng}` : (place?.trim() || "47.3769,8.5417");
   const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=6&output=embed`;
 
   return (
@@ -376,20 +411,41 @@ export default function App() {
       <style>{global}</style>
 
       {/* NAVBAR */}
-      <div style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(255,255,255,0.9)", borderBottom: `1px solid ${COLORS.line}`, backdropFilter: "saturate(180%) blur(6px)" }}>
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+          background: "rgba(255,255,255,0.9)",
+          borderBottom: `1px solid ${COLORS.line}`,
+          backdropFilter: "saturate(180%) blur(6px)",
+        }}
+      >
         <Container>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
             <a href="#home" style={{ textDecoration: "none", color: COLORS.ink }}>
-              <span className="brand">FLABI <span className="muted">ON&nbsp;TOUR</span></span>
+              <span className="brand">
+                FLABI <span className="muted">ON&nbsp;TOUR</span>
+              </span>
             </a>
             <div className="admin-right" style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <a href="#blog" style={{ color: COLORS.gray, textDecoration: "none" }}>Blog</a>
-              <a href="#map" style={{ color: COLORS.gray, textDecoration: "none" }}>Karte</a>
-              <a href="#donate" style={{ color: COLORS.gray, textDecoration: "none" }}>Spenden</a>
+              <a href="#blog" style={{ color: COLORS.gray, textDecoration: "none" }}>
+                Blog
+              </a>
+              <a href="#map" style={{ color: COLORS.gray, textDecoration: "none" }}>
+                Karte
+              </a>
+              <a href="#donate" style={{ color: COLORS.gray, textDecoration: "none" }}>
+                Spenden
+              </a>
               {!isAdmin ? (
-                <Button className="btn-ghost" style={{ color: COLORS.gray }} onClick={() => setAskPass(true)}>Admin</Button>
+                <Button className="btn-ghost" style={{ color: COLORS.gray }} onClick={() => setAskPass(true)}>
+                  Admin
+                </Button>
               ) : (
-                <Button className="btn-ghost" onClick={logout}>Logout</Button>
+                <Button className="btn-ghost" onClick={logout}>
+                  Logout
+                </Button>
               )}
             </div>
           </div>
@@ -408,7 +464,9 @@ export default function App() {
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
               <Button onClick={tryLogin}>Einloggen</Button>
-              <Button className="btn-ghost" onClick={() => setAskPass(false)} style={{ color: COLORS.ink }}>Abbrechen</Button>
+              <Button className="btn-ghost" onClick={() => setAskPass(false)} style={{ color: COLORS.ink }}>
+                Abbrechen
+              </Button>
             </div>
           </div>
         </div>
@@ -421,9 +479,12 @@ export default function App() {
             <div style={{ fontSize: 12, color: COLORS.gray, letterSpacing: 1 }}>CARBAGE RUN 2025</div>
             <h1 style={{ fontSize: 44, margin: "8px 0 10px", color: COLORS.brand }}>Flabi on tour</h1>
             <p style={{ color: COLORS.gray, maxWidth: 560 }}>
-              <b>Wir sind zwei Freunde, ein alter VW und die Lust auf ein großes Abenteuer.</b><br/>
-              Beim Carbage Run 2025 fahren wir in mehreren Etappen quer durch Europa Richtung Balkan, schlafen im selbstgebauten Bett, kochen auf dem Campingkocher und erzählen hier täglich von Pannen, Pässen und kleinen Siegen. Unser Wagen ist mehr Werkstatt-Projekt als Rennwagen – mit Bett, Vorhängen und Rally-Deko.<br/>
-              Auf der Karte kannst du unsere Position live verfolgen. Fotos, kurze Blog-Updates und die wichtigsten Zahlen findest du hier an einem Ort.<br/>
+              <b>Wir sind zwei Freunde, ein alter VW und die Lust auf ein großes Abenteuer.</b>
+              <br />
+              Beim Carbage Run 2025 fahren wir in mehreren Etappen quer durch Europa Richtung Balkan, schlafen im selbstgebauten Bett, kochen auf dem Campingkocher und erzählen hier täglich von Pannen, Pässen und kleinen Siegen. Unser Wagen ist mehr Werkstatt-Projekt als Rennwagen – mit Bett, Vorhängen und Rally-Deko.
+              <br />
+              Auf der Karte kannst du unsere Position live verfolgen. Fotos, kurze Blog-Updates und die wichtigsten Zahlen findest du hier an einem Ort.
+              <br />
               Wenn du uns begleiten willst, kannst du mit einer Zusage pro Kilometer oder einem festen Beitrag die Paraplegie Schweiz unterstützen.
             </p>
             <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
@@ -443,7 +504,11 @@ export default function App() {
       <Section id="blog">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <h2 style={{ fontSize: 26, margin: 0 }}>Rally Blog</h2>
-          {isAdmin && <Button onClick={addBlog} disabled={uploading}>＋ Eintrag speichern</Button>}
+          {isAdmin && (
+            <Button onClick={addBlog} disabled={uploading}>
+              ＋ Eintrag speichern
+            </Button>
+          )}
         </div>
 
         {isAdmin && (
@@ -456,7 +521,10 @@ export default function App() {
               <div>
                 <div style={{ fontSize: 12, marginBottom: 6 }}>Bilder</div>
                 <input
-                  type="file" accept="image/*" multiple disabled={uploading}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={uploading}
                   onChange={async (e) => {
                     const files = Array.from(e.target.files || []);
                     if (!files.length) return;
@@ -489,12 +557,7 @@ export default function App() {
                 {imgs.length > 0 && (
                   <div className="gallery">
                     <div className="gallery-left">
-                      <img
-                        src={imgs[0]}
-                        alt="main"
-                        className="mainimg"
-                        onClick={() => openLightbox(imgs, 0)}
-                      />
+                      <img src={imgs[0]} alt="main" className="mainimg" onClick={() => openLightbox(imgs, 0)} />
                     </div>
                     <div className="gallery-right">
                       {rightThumbs.map((u, idx) => {
@@ -502,12 +565,7 @@ export default function App() {
                         const globalIndex = idx + 1; // Lightbox-Index
                         return (
                           <div key={idx} style={{ position: "relative" }}>
-                            <img
-                              src={u}
-                              alt={`img-${idx + 1}`}
-                              className="thumb"
-                              onClick={() => openLightbox(imgs, globalIndex)}
-                            />
+                            <img src={u} alt={`img-${idx + 1}`} className="thumb" onClick={() => openLightbox(imgs, globalIndex)} />
                             {isLast && (
                               <div className="more-overlay" onClick={() => openLightbox(imgs, globalIndex)}>
                                 +{extraCount}
@@ -527,26 +585,39 @@ export default function App() {
                       <Textarea rows={4} style={{ marginTop: 8 }} value={editEntry.text} onChange={(e) => setEditEntry((s) => ({ ...s, text: e.target.value }))} />
                       <div style={{ marginTop: 8 }}>
                         <div style={{ fontSize: 12, marginBottom: 6 }}>Weitere Bilder hinzufügen</div>
-                        <input type="file" accept="image/*" multiple disabled={uploading} onChange={async (e) => {
-                          const files = Array.from(e.target.files || []);
-                          if (!files.length) return;
-                          setUploading(true);
-                          const urls = await uploadImages(files);
-                          setEditEntry((s) => ({ ...s, images: [...s.images, ...urls] }));
-                          setUploading(false);
-                        }} />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          disabled={uploading}
+                          onChange={async (e) => {
+                            const files = Array.from(e.target.files || []);
+                            if (!files.length) return;
+                            setUploading(true);
+                            const urls = await uploadImages(files);
+                            setEditEntry((s) => ({ ...s, images: [...s.images, ...urls] }));
+                            setUploading(false);
+                          }}
+                        />
                         <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                           {(editEntry.images || []).map((u, i) => (
                             <div key={i} style={{ position: "relative" }}>
                               <img src={u} alt="thumb" style={{ width: 90, height: 70, objectFit: "cover", border: `1px solid ${COLORS.line}` }} />
-                              <button onClick={() => setEditEntry((s) => ({ ...s, images: s.images.filter((_, x) => x !== i) }))} style={{ position: "absolute", top: -6, right: -6, background: "#000", color: "#fff", border: "none", width: 20, height: 20, cursor: "pointer" }}>×</button>
+                              <button
+                                onClick={() => setEditEntry((s) => ({ ...s, images: s.images.filter((_, x) => x !== i) }))}
+                                style={{ position: "absolute", top: -6, right: -6, background: "#000", color: "#fff", border: "none", width: 20, height: 20, cursor: "pointer" }}
+                              >
+                                ×
+                              </button>
                             </div>
                           ))}
                         </div>
                       </div>
                       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                         <Button onClick={saveEdit}>Speichern</Button>
-                        <Button className="btn-ghost" onClick={() => setEditingId(null)} style={{ color: COLORS.ink }}>Abbrechen</Button>
+                        <Button className="btn-ghost" onClick={() => setEditingId(null)} style={{ color: COLORS.ink }}>
+                          Abbrechen
+                        </Button>
                       </div>
                     </div>
                   ) : (
@@ -556,8 +627,12 @@ export default function App() {
                       {post.created_at && <p style={{ color: COLORS.gray, fontSize: 12, marginTop: 8 }}>{new Date(post.created_at).toLocaleString()}</p>}
                       {isAdmin && (
                         <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                          <Button className="btn-ghost" onClick={() => setEditingId(post.id)} style={{ color: COLORS.ink }}>Bearbeiten</Button>
-                          <Button className="btn-ghost" onClick={() => deletePost(post)} style={{ color: COLORS.alert }}>Löschen</Button>
+                          <Button className="btn-ghost" onClick={() => setEditingId(post.id)} style={{ color: COLORS.ink }}>
+                            Bearbeiten
+                          </Button>
+                          <Button className="btn-ghost" onClick={() => deletePost(post)} style={{ color: COLORS.alert }}>
+                            Löschen
+                          </Button>
                         </div>
                       )}
                     </>
@@ -586,21 +661,38 @@ export default function App() {
         {isAdmin && (
           <div style={{ border: `1px solid ${COLORS.line}`, background: "#fff", marginTop: 12, padding: 16 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, alignItems: "end" }}>
-              <div><div style={{ fontSize: 12, marginBottom: 6 }}>Lat</div><Input value={lat} onChange={(e) => setLat(e.target.value)} /></div>
-              <div><div style={{ fontSize: 12, marginBottom: 6 }}>Lng</div><Input value={lng} onChange={(e) => setLng(e.target.value)} /></div>
-              <div><div style={{ fontSize: 12, marginBottom: 6 }}>Ort/Adresse (optional)</div><Input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="z. B. Sarajevo, BIH" /></div>
+              <div>
+                <div style={{ fontSize: 12, marginBottom: 6 }}>Lat</div>
+                <Input value={lat} onChange={(e) => setLat(e.target.value)} />
+              </div>
+              <div>
+                <div style={{ fontSize: 12, marginBottom: 6 }}>Lng</div>
+                <Input value={lng} onChange={(e) => setLng(e.target.value)} />
+              </div>
+              <div>
+                <div style={{ fontSize: 12, marginBottom: 6 }}>Ort/Adresse (optional)</div>
+                <Input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="z. B. Sarajevo, BIH" />
+              </div>
               <Button onClick={updateStatus}>Pin/Status speichern</Button>
-              <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
-  <Button onClick={() => useAdminLocation(true)}>Standort übernehmen</Button>
-  <Button className="btn-ghost" onClick={() => setPlace("")} style={{ color: COLORS.ink }}>
-    Ort/Adresse ignorieren
-  </Button>
             </div>
+
+            <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <Button onClick={() => useAdminLocation(true)}>Standort übernehmen</Button>
+              <Button className="btn-ghost" onClick={() => setPlace("")} style={{ color: COLORS.ink }}>
+                Ort/Adresse ignorieren
+              </Button>
+            </div>
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "end", marginTop: 10 }}>
-              <div><div style={{ fontSize: 12, marginBottom: 6 }}>Gefahrene km</div><Input type="number" min={0} value={km} onChange={(e) => setKm(e.target.value)} /></div>
+              <div>
+                <div style={{ fontSize: 12, marginBottom: 6 }}>Gefahrene km</div>
+                <Input type="number" min={0} value={km} onChange={(e) => setKm(e.target.value)} />
+              </div>
               <div />
             </div>
-            <p style={{ color: COLORS.gray, marginTop: 10 }}>Anzeige nutzt <code>{place ? "Ort/Adresse" : "Lat/Lng"}</code>.</p>
+            <p style={{ color: COLORS.gray, marginTop: 10 }}>
+              Anzeige nutzt <code>{place ? "Ort/Adresse" : "Lat/Lng"}</code>.
+            </p>
           </div>
         )}
       </Section>
@@ -609,27 +701,42 @@ export default function App() {
       <Section id="donate">
         <h2 style={{ fontSize: 26, marginBottom: 8 }}>Spenden</h2>
         <p style={{ color: COLORS.gray, marginTop: 0, marginBottom: 16 }}>
-  Auf unserer Rally … Unterstütze die <b>Paraplegie Schweiz</b> – wähle zwischen Zusage pro Kilometer <b>(Wir hoffen die ganzen 2500km zu schaffen)</b> oder einem festen Betrag.
-</p>
-
+          Auf unserer Rally … Unterstütze die <b>Paraplegie Schweiz</b> – wähle zwischen Zusage pro Kilometer <b>(Wir hoffen die ganzen 2500km zu schaffen)</b> oder einem festen Betrag.
+        </p>
 
         <div className="donate-grid">
           <div style={{ border: `1px solid ${COLORS.line}`, background: "#fff", padding: 16 }}>
             <h3 style={{ marginTop: 0 }}>Zusage pro Kilometer</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><div style={{ fontSize: 12, marginBottom: 6 }}>Name</div><Input id="pledge-name" placeholder="Vor- & Nachname" /></div>
-              <div><div style={{ fontSize: 12, marginBottom: 6 }}>Betrag pro km (CHF)</div><Input id="pledge-amount" type="number" step="0.1" min={0} placeholder="z. B. 0.50" /></div>
+              <div>
+                <div style={{ fontSize: 12, marginBottom: 6 }}>Name</div>
+                <Input id="pledge-name" placeholder="Vor- & Nachname" />
+              </div>
+              <div>
+                <div style={{ fontSize: 12, marginBottom: 6 }}>Betrag pro km (CHF)</div>
+                <Input id="pledge-amount" type="number" step="0.1" min={0} placeholder="z. B. 0.50" />
+              </div>
             </div>
-            <div style={{ marginTop: 12 }}><Button onClick={addPledge}>Zusage speichern</Button></div>
+            <div style={{ marginTop: 12 }}>
+              <Button onClick={addPledge}>Zusage speichern</Button>
+            </div>
           </div>
 
           <div style={{ border: `1px solid ${COLORS.line}`, background: "#fff", padding: 16 }}>
             <h3 style={{ marginTop: 0 }}>Fester Betrag</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><div style={{ fontSize: 12, marginBottom: 6 }}>Name</div><Input id="fixed-name" placeholder="Vor- & Nachname" /></div>
-              <div><div style={{ fontSize: 12, marginBottom: 6 }}>Betrag (CHF)</div><Input id="fixed-amount" type="number" step="1" min={0} placeholder="z. B. 50" /></div>
+              <div>
+                <div style={{ fontSize: 12, marginBottom: 6 }}>Name</div>
+                <Input id="fixed-name" placeholder="Vor- & Nachname" />
+              </div>
+              <div>
+                <div style={{ fontSize: 12, marginBottom: 6 }}>Betrag (CHF)</div>
+                <Input id="fixed-amount" type="number" step="1" min={0} placeholder="z. B. 50" />
+              </div>
             </div>
-            <div style={{ marginTop: 12 }}><Button onClick={addFixed}>Spende vormerken</Button></div>
+            <div style={{ marginTop: 12 }}>
+              <Button onClick={addFixed}>Spende vormerken</Button>
+            </div>
           </div>
         </div>
 
@@ -649,7 +756,11 @@ export default function App() {
                   <span>{p.name}</span>
                   <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <b>CHF {Number(p.amount_per_km).toFixed(2)} / km</b>
-                    {isAdmin && <Button className="btn-ghost" style={{ color: COLORS.alert }} onClick={() => deletePledge(p.id)}>Löschen</Button>}
+                    {isAdmin && (
+                      <Button className="btn-ghost" style={{ color: COLORS.alert }} onClick={() => deletePledge(p.id)}>
+                        Löschen
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -658,7 +769,11 @@ export default function App() {
                   <span>{p.name}</span>
                   <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <b>CHF {Number(p.amount).toFixed(2)} einmalig</b>
-                    {isAdmin && <Button className="btn-ghost" style={{ color: COLORS.alert }} onClick={() => deleteFixed(p.id)}>Löschen</Button>}
+                    {isAdmin && (
+                      <Button className="btn-ghost" style={{ color: COLORS.alert }} onClick={() => deleteFixed(p.id)}>
+                        Löschen
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -672,13 +787,26 @@ export default function App() {
       {lightbox.open && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "grid", placeItems: "center", zIndex: 70 }}>
           <img src={lightbox.images[lightbox.index]} alt="img" style={{ maxWidth: "90vw", maxHeight: "85vh" }} />
-          <button onClick={closeLightbox} style={{ position: "fixed", top: 16, right: 20, background: "#000", color: "#fff", border: "1px solid #fff", padding: "6px 10px", cursor: "pointer" }}>
+          <button
+            onClick={closeLightbox}
+            style={{ position: "fixed", top: 16, right: 20, background: "#000", color: "#fff", border: "1px solid #fff", padding: "6px 10px", cursor: "pointer" }}
+          >
             Schließen
           </button>
           {lightbox.images.length > 1 && (
             <>
-              <button onClick={prev} style={{ position: "fixed", left: 20, top: "50%", transform: "translateY(-50%)", background: "#000", color: "#fff", border: "none", width: 44, height: 44, cursor: "pointer" }}>‹</button>
-              <button onClick={next} style={{ position: "fixed", right: 20, top: "50%", transform: "translateY(-50%)", background: "#000", color: "#fff", border: "none", width: 44, height: 44, cursor: "pointer" }}>›</button>
+              <button
+                onClick={prev}
+                style={{ position: "fixed", left: 20, top: "50%", transform: "translateY(-50%)", background: "#000", color: "#fff", border: "none", width: 44, height: 44, cursor: "pointer" }}
+              >
+                ‹
+              </button>
+              <button
+                onClick={next}
+                style={{ position: "fixed", right: 20, top: "50%", transform: "translateY(-50%)", background: "#000", color: "#fff", border: "none", width: 44, height: 44, cursor: "pointer" }}
+              >
+                ›
+              </button>
             </>
           )}
         </div>
